@@ -29,3 +29,11 @@ def prepare_grid(cols, rows):
         with st.container():
             grid[i] = st.columns(rows)
     return grid
+
+def prepare_check_boxes():
+    st.session_state["use_kmeans_index"] = st.checkbox("Utiliser un index K-means")
+    if st.session_state["use_kmeans_index"]:
+        st.session_state["n_clusters"] = st.number_input("Nombre de clusters")
+        st.session_state["add_nprobes"] = st.checkbox("Paramétrage N-sondes")
+        if st.session_state["add_nprobes"]:
+            st.session_state["n_probes"] = st.number_input("Nombre de sondes")
