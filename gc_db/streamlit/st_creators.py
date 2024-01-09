@@ -1,16 +1,10 @@
 import streamlit as st
-from gc_db.utils.flex_logging import stream_handler
-import logging
-
-logger = logging.getLogger(__name__)
-logger.addHandler(stream_handler)
-logger.setLevel(logging.DEBUG)
 
 
 def display_result_gallery(images_list: list[str], nb_cols: int = 10):
     nb_images = len(images_list)
     nb_rows = int(nb_images / nb_cols)
-    image_grid = prepare_grid(nb_rows,nb_cols)
+    image_grid = prepare_grid(nb_rows, nb_cols)
     col = 0
     row = 0
     for i, image_path in enumerate(images_list):

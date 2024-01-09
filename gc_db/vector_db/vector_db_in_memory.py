@@ -1,73 +1,57 @@
 import numpy as np
+from sklearn.cluster import KMeans
 
 from gc_db.vector_db.vector_db import VectorDB
-from sklearn.cluster import KMeans
 
 
 class VectorDB_IM(VectorDB):
 
     def __init__(self):
-        self.db_struct: dict[int, np.array] = {}
+        self.vector_list: list[np.array] = []
+        self.ids_list: list[int] = []
         self.kmeans_index: dict[int, list[int]] = {}
-        self.centroids: dict[int, np.array] = {}
 
     def insert(self, vector: np.array, external_id: int):
-        self.db_struct[external_id] = vector
+        self.vector_list.append(vector)
+        self.ids_list.append(external_id)
 
     def query(self, query_vector: np.array, k: int = 20):
-        distances_and_ids = [(external_id, self.cosine_similarity(query_vector, self.db_struct[external_id])) for
-                             external_id in self.db_struct.keys()]
-        external_ids, distances = zip(*distances_and_ids)
-        knn_ids = np.argpartition(distances, -k)[-k:]
-        nn_distances_external_ids = [(distances[id], external_ids[id]) for id in knn_ids]
-        nn_distances_external_ids.sort(key=lambda x:-x[0])
-        return nn_distances_external_ids
+        distances = [self.cosine_similarity(vector, query_vector) for vector in self.vector_list]
+        knn = np.argpartition(distances, -k)[-k:]
+        knn_ids_and_distances = [(self.ids_list[id], distances[id]) for id in knn]
+        knn_ids_and_distances.sort(key=lambda x: -x[1])
+        return knn_ids_and_distances
+
+    def create_kmeans_index(self, n_clusters: int = 20):
+        kmeans = KMeans(n_clusters=n_clusters)
+        kmeans.fit(self.vector_list)
+        predicted_clusters = kmeans.predict(self.vector_list)
+        for vector_id, predicted_cluster in enumerate(predicted_clusters):
+            if predicted_cluster in self.kmeans_index:
+                old_list = self.kmeans_index[predicted_cluster]
+                old_list.append(vector_id)
+                self.kmeans_index[predicted_cluster] = old_list
+            else:
+                self.kmeans_index[predicted_cluster] = [vector_id]
+        self.codebook = kmeans.cluster_centers_
+
+    def query_with_kmeans_index(self, query_vector: np.array, k: int = 20, n_probes: int = 1):
+        centers_distance = [self.cosine_similarity(center, query_vector) for center in self.codebook]
+        nearest_centers_ids = np.argpartition(centers_distance, -n_probes)[-n_probes:]
+        vector_ids_probe_list = [vector for cluster_id in nearest_centers_ids for vector in
+                                 self.kmeans_index[cluster_id]]
+        distances = [self.cosine_similarity(self.vector_list[vector_id], query_vector) for vector_id in
+                     vector_ids_probe_list]
+        knn_vector_ids = np.argpartition(distances, -k)[-k:]
+        knn_vector_local_ids = [vector_ids_probe_list[local_id] for local_id in knn_vector_ids]
+        knn_vector_external_ids = [self.ids_list[id] for id in knn_vector_local_ids]
+        knn_distances = [distances[local_id] for local_id in knn_vector_ids]
+        external_ids_and_distance = list(zip(knn_vector_external_ids, knn_distances))
+        external_ids_and_distance.sort(key=lambda x: -x[1])
+        return external_ids_and_distance
 
     @staticmethod
-    def cosine_similarity(vector_A: np.array, vector_B: np.array):
-        numerateur = np.dot(vector_A, vector_B)
-        denominateur = np.dot(np.linalg.norm(vector_A), np.linalg.norm(vector_B))
-        cos_sim = numerateur / denominateur
-        return cos_sim
-
-    def compute_kmeans_clustering(self, nb_clusters: int = 10):
-        kmeans = KMeans(n_clusters=nb_clusters)
-        X = [vector for vector in self.db_struct.values()]
-        kmeans.fit(np.array(X))
-        for external_id in self.db_struct.keys():
-            vector = self.db_struct[external_id]
-            cluster_id = kmeans.predict(np.array([vector]))[0]
-            self.add_vector_to_kmeans_index(cluster_id, external_id)
-
-        for centroid_id, centroid in enumerate(kmeans.cluster_centers_):
-            self.centroids[centroid_id] = centroid
-
-    def add_vector_to_kmeans_index(self, cluster_id: int, external_id: int):
-        if cluster_id in self.kmeans_index.keys():
-            cluster_vector_list = self.kmeans_index[cluster_id]
-            cluster_vector_list.append(external_id)
-            self.kmeans_index[cluster_id] = cluster_vector_list
-        else:
-            cluster_vector_list = [external_id]
-            self.kmeans_index[cluster_id] = cluster_vector_list
-
-    def find_knearest_clusters_to_vector(self, query_vector: np.array, n_probes):
-        distances_and_cluster_ids = [(cluster_id, self.cosine_similarity(query_vector, self.centroids[cluster_id])) for
-                                     cluster_id in
-                                     self.centroids.keys()]
-        cluster_ids, distances = zip(*distances_and_cluster_ids)
-        nnclusters_ids = np.argpartition(distances, -n_probes)[-n_probes:]
-        return nnclusters_ids
-
-    def query_with_kmeans_index(self, query_vector: int, k: int = 20, n_probes: int = 1):
-        nn_clusters_ids = self.find_knearest_clusters_to_vector(query_vector, n_probes=n_probes)
-        all_distances = []
-        for cluster_id in nn_clusters_ids:
-            cluster_vector_ids_list = self.kmeans_index[cluster_id]
-            for external_id in cluster_vector_ids_list:
-                all_distances.append((external_id, self.cosine_similarity(query_vector, self.db_struct[external_id])))
-        external_ids, distances = zip(*all_distances)
-        nn_ids = np.argpartition(distances, -k)[-k:]
-        nn_distances_external_ids = [(distances[id], external_ids[id]) for id in nn_ids]
-        nn_distances_external_ids.sort(key=lambda x: -x[0])
-        return nn_distances_external_ids
+    def cosine_similarity(vector, query_vector):
+        num = np.dot(vector, query_vector)
+        denom = np.dot(np.linalg.norm(vector), np.linalg.norm(vector))
+        return num / denom
