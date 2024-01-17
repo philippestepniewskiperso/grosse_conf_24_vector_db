@@ -1,4 +1,8 @@
+import pickle
+import time
+
 import numpy as np
+from fashion_clip.fashion_clip import FashionCLIP
 from sklearn.cluster import KMeans
 
 from gc_db.vector_db.vector_db import VectorDB
@@ -7,51 +11,64 @@ from gc_db.vector_db.vector_db import VectorDB
 class VectorDB_IM(VectorDB):
 
     def __init__(self):
-        self.vector_list: list[np.array] = []
-        self.ids_list: list[int] = []
-        self.kmeans_index: dict[int, list[int]] = {}
+        self.codebook = None
+        self.db_vector_list = []
+        self.inverted_index = {}
+        self.db_external_ids = []
 
     def insert(self, vector: np.array, external_id: int):
-        self.vector_list.append(vector)
-        self.ids_list.append(external_id)
+        self.db_vector_list.append(vector)
+        self.db_external_ids.append(external_id)
 
-    def query(self, query_vector: np.array, k: int = 20):
-        distances = [self.cosine_similarity(vector, query_vector) for vector in self.vector_list]
-        knn = np.argpartition(distances, -k)[-k:]
-        knn_ids_and_distances = [(self.ids_list[id], distances[id]) for id in knn]
-        knn_ids_and_distances.sort(key=lambda x: -x[1])
-        return knn_ids_and_distances
+    def query(self, query_vector: np.array, k: int = 10):
+        distances = [self.cosine_similarity(query_vector, vector) for vector in self.db_vector_list]
+        nearest_ids = np.argpartition(distances, -k)[-k:]
+        nearest_ext_ids_and_dist = [(self.db_external_ids[internal_id], distances[internal_id]) for internal_id in
+                                    nearest_ids]
+        nearest_ext_ids_and_dist.sort(key=lambda x: -x[1])
+        return nearest_ext_ids_and_dist
 
-    def create_kmeans_index(self, n_clusters: int = 20):
-        kmeans = KMeans(n_clusters=n_clusters)
-        kmeans.fit(self.vector_list)
-        predicted_clusters = kmeans.predict(self.vector_list)
-        for vector_id, predicted_cluster in enumerate(predicted_clusters):
-            if predicted_cluster in self.kmeans_index:
-                old_list = self.kmeans_index[predicted_cluster]
-                old_list.append(vector_id)
-                self.kmeans_index[predicted_cluster] = old_list
-            else:
-                self.kmeans_index[predicted_cluster] = [vector_id]
+    def query_with_kmeans(self, query_vector: np.array, k: int = 10, n_probes: int = 2):
+        distances_with_centroids = [self.cosine_similarity(query_vector, centroid) for centroid in self.codebook]
+        nearest_centroids_ids = np.argpartition(distances_with_centroids, -n_probes)[-n_probes:]
+        vectors_ids_in_probes = [vector_id for centroid_id in nearest_centroids_ids for vector_id in
+                                 self.inverted_index[centroid_id]]
+        distances = [self.cosine_similarity(query_vector, self.db_vector_list[vector_id]) for vector_id in
+                     vectors_ids_in_probes]
+        nearest_vectors_index = np.argpartition(distances, -k)[-k:]
+        nearest_vectors_ids_and_distance = [(self.db_external_ids[vectors_ids_in_probes[vector_index]], distances[vector_index]) for
+                                            vector_index in nearest_vectors_index]
+        nearest_vectors_ids_and_distance.sort(key=lambda x: -x[1])
+        return nearest_vectors_ids_and_distance
+
+    def init_kmeans_index(self, nb_clusters: int = 10):
+        kmeans = KMeans(n_clusters=nb_clusters)
+        kmeans.fit(self.db_vector_list)
         self.codebook = kmeans.cluster_centers_
+        predicted_clusters = kmeans.predict(self.db_vector_list)
+        for internal_id, cluster_id in enumerate(predicted_clusters):
+            if cluster_id in self.inverted_index:
+                current_list = self.inverted_index[cluster_id]
+                current_list.append(internal_id)
+            else:
+                self.inverted_index[cluster_id] = [internal_id]
 
-    def query_with_kmeans_index(self, query_vector: np.array, k: int = 20, n_probes: int = 1):
-        centers_distance = [self.cosine_similarity(center, query_vector) for center in self.codebook]
-        nearest_centers_ids = np.argpartition(centers_distance, -n_probes)[-n_probes:]
-        vector_ids_probe_list = [vector for cluster_id in nearest_centers_ids for vector in
-                                 self.kmeans_index[cluster_id]]
-        distances = [self.cosine_similarity(self.vector_list[vector_id], query_vector) for vector_id in
-                     vector_ids_probe_list]
-        knn_vector_ids = np.argpartition(distances, -k)[-k:]
-        knn_vector_local_ids = [vector_ids_probe_list[local_id] for local_id in knn_vector_ids]
-        knn_vector_external_ids = [self.ids_list[id] for id in knn_vector_local_ids]
-        knn_distances = [distances[local_id] for local_id in knn_vector_ids]
-        external_ids_and_distance = list(zip(knn_vector_external_ids, knn_distances))
-        external_ids_and_distance.sort(key=lambda x: -x[1])
-        return external_ids_and_distance
-
-    @staticmethod
-    def cosine_similarity(vector, query_vector):
-        num = np.dot(vector, query_vector)
-        denom = np.dot(np.linalg.norm(vector), np.linalg.norm(vector))
+    def cosine_similarity(self, query_vector, vector):
+        num = np.dot(query_vector, vector)
+        denom = np.dot(np.linalg.norm(query_vector), np.linalg.norm(vector))
         return num / denom
+
+
+if __name__ == "__main__":
+    dict_ids_embeddings = pickle.load(open("../../data/dict_ids_embeddings.pickle", "rb"))
+    VDB_IM = VectorDB_IM()
+    # logger.info("Loading vector to memory db : " + str(len(dict_ids_embeddings.keys())))
+    _ = [VDB_IM.insert(dict_ids_embeddings[id], id) for id in dict_ids_embeddings.keys()]
+    VDB_IM.init_kmeans_index()
+    FCLIP = FashionCLIP('fashion-clip')
+    embeded_query = FCLIP.encode_text(["White tee shirt with NASA logo"], 1)[0]
+    start = time.time()
+    nn = VDB_IM.query_with_kmeans(embeded_query)
+    end = time.time()
+    lasted = np.round(end - start, 3)
+    print("Time elapsed:" + str(lasted))

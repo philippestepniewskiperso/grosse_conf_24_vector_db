@@ -13,7 +13,7 @@ if "is_initiated" not in st.session_state:
     VDB_IM = VectorDB_IM()
     # logger.info("Loading vector to memory db : " + str(len(dict_ids_embeddings.keys())))
     _ = [VDB_IM.insert(dict_ids_embeddings[id], id) for id in dict_ids_embeddings.keys()]
-    VDB_IM.create_kmeans_index()
+    VDB_IM.init_kmeans_index()
     st.session_state["VDB_IM"] = VDB_IM
     st.session_state["FCLIP"] = FashionCLIP('fashion-clip')
     st.session_state["is_initiated"] = True
@@ -34,12 +34,13 @@ with col2:
 if query_text != "":
     embeded_query = FCLIP.encode_text([query_text], 1)[0]
     start = time.time()
-    nn = VDB_IM.query_with_kmeans_index(embeded_query)
+    nn = VDB_IM.query_with_kmeans(embeded_query,n_probes=10)
     end = time.time()
     lasted = np.round(end - start, 3)
     #   logger.info(f"Results in {lasted} for first vector in dict as query" + str(nn))
 
     #  logger.debug("images: " + str(nn[:25]))
+    print("images: " + str(nn[:25]))
     image_pathes = [get_path_from_image_id(dist_id[0]) for dist_id in nn]
     st.info(f"Temps d'éxecution de la requête : **{lasted} seconds**")
     stc.display_result_gallery(image_pathes, 5)
