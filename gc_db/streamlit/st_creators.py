@@ -1,7 +1,9 @@
+import numpy as np
 import streamlit as st
 
 
-def display_result_gallery(images_list: list[str], nb_cols: int = 10):
+def display_result_gallery(images_list: list[str], similarities: list[float], is_bool_list: list[bool],
+                           nb_cols: int = 10):
     nb_images = len(images_list)
     nb_rows = int(nb_images / nb_cols)
     image_grid = prepare_grid(nb_rows, nb_cols)
@@ -12,7 +14,13 @@ def display_result_gallery(images_list: list[str], nb_cols: int = 10):
             row += 1
             col = 0
         try:
-            image_grid[row][col].image(image_path)
+            with image_grid[row][col]:
+                with st.container(border=True):
+                    st.image(image_path)
+                    is_knn = is_bool_list[i]
+                    sim_to_disp = str(round(similarities[i], 2))
+                    st.write(f"Similarité: {sim_to_disp} \n **KNN: :{'green' if is_knn else 'red'}[{is_knn}]**")
+
         except IndexError:
             pass
         col += 1
