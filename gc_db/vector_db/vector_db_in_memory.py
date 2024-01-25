@@ -66,11 +66,20 @@ if __name__ == "__main__":
     VDB_IM = VectorDB_IM()
     # logger.info("Loading vector to memory db : " + str(len(dict_ids_embeddings.keys())))
     _ = [VDB_IM.insert(dict_ids_embeddings[id], id) for id in dict_ids_embeddings.keys()]
-    VDB_IM.init_kmeans_index()
+
     FCLIP = FashionCLIP('fashion-clip')
     embeded_query = FCLIP.encode_text(["White tee shirt with NASA logo"], 1)[0]
     start = time.time()
-    nn = VDB_IM.query_with_kmeans(embeded_query)
+    nn = VDB_IM.query(embeded_query)
     end = time.time()
     lasted = np.round(end - start, 3)
-    print("Time elapsed:" + str(lasted))
+    print("Time elapsed with exhaustive search:" + str(lasted))
+
+    if hasattr(VDB_IM, 'query_with_kmeans'):
+        VDB_IM.init_kmeans_index()
+        start = time.time()
+        nn = nn = VDB_IM.query_with_kmeans(embeded_query)
+        end = time.time()
+        lasted = np.round(end - start, 3)
+        print("Time elapsed with IVF search:" + str(lasted))
+
