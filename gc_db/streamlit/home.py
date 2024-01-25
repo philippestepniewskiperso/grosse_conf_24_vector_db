@@ -1,19 +1,26 @@
-import streamlit as st
-import gc_db.streamlit.st_creators as stc
-from gc_db.utils.utils import get_path_from_image_id
-from gc_db.vector_db.vector_db_in_memory import VectorDB_IM
+import logging as logger
 import pickle
-import numpy as np
 import time
+
+import streamlit as st
 from fashion_clip.fashion_clip import FashionCLIP
+
+from gc_db.streamlit.st_utils import perform_query
+from gc_db.vector_db.vector_db_in_memory import VectorDB_IM
+
+st.session_state["k"] = 20
 
 if "is_initiated" not in st.session_state:
     print("INITIATING")
     dict_ids_embeddings = pickle.load(open("data/dict_ids_embeddings.pickle", "rb"))
     VDB_IM = VectorDB_IM()
-    # logger.info("Loading vector to memory db : " + str(len(dict_ids_embeddings.keys())))
+    logger.info("Loading vector to memory db : " + str(len(dict_ids_embeddings.keys())))
     _ = [VDB_IM.insert(dict_ids_embeddings[id], id) for id in dict_ids_embeddings.keys()]
-    VDB_IM.init_kmeans_index()
+    start = time.time()
+    st.session_state["n_clusters"] = 10
+    VDB_IM.init_kmeans_index(nb_clusters=st.session_state["n_clusters"])
+    stop = time.time()
+    print(f"Kmeans indexed in {str(stop - start)}")
     st.session_state["VDB_IM"] = VDB_IM
     st.session_state["FCLIP"] = FashionCLIP('fashion-clip')
     st.session_state["is_initiated"] = True
@@ -25,22 +32,19 @@ st.set_page_config(layout="wide")
 st.title("MOTEUR DE RECHERCHE MULTIMODAL")
 with st.sidebar:
     st.image("./data/assets/gc_logo.webp")
+    query_text = st.text_input(label="**Votre requête:**")
+    if hasattr(VDB_IM, 'query_with_kmeans'):
+        st.checkbox("**Utiliser l'index inversé**", key="use_ivf")
+        if st.session_state["use_ivf"]:
+            st.number_input("**Nombre de sondes:**", key="n_probes", value=1, step=1)
+    search = st.button("Rechercher")
+    if st.session_state["use_ivf"]:
+        st.number_input("**Nombre de clusters:**", key="n_clusters", value=10, step=1)
+        reindex = st.button("Ré-indexer")
+        if reindex:
+            VDB_IM.init_kmeans_index(nb_clusters=st.session_state["n_clusters"])
+            st.write(len(VDB_IM.inverted_index))
 
-col1, col2 = st.columns(2)
-with col1:
-    st.markdown("## Votre requête:")
-with col2:
-    query_text = st.text_input("")
-if query_text != "":
-    embeded_query = FCLIP.encode_text([query_text], 1)[0]
-    start = time.time()
-    nn = VDB_IM.query_with_kmeans(embeded_query,n_probes=10)
-    end = time.time()
-    lasted = np.round(end - start, 3)
-    #   logger.info(f"Results in {lasted} for first vector in dict as query" + str(nn))
-
-    #  logger.debug("images: " + str(nn[:25]))
-    print("images: " + str(nn[:25]))
-    image_pathes = [get_path_from_image_id(dist_id[0]) for dist_id in nn]
-    st.info(f"Temps d'éxecution de la requête : **{lasted} seconds**")
-    stc.display_result_gallery(image_pathes, 5)
+if search:
+    perform_query(VDB_IM, FCLIP, query_text, use_kmeans_query=st.session_state["use_ivf"])
+    st.write(st.session_state["log_dataframe"])

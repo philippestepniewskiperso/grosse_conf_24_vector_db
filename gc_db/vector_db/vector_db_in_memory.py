@@ -36,8 +36,9 @@ class VectorDB_IM(VectorDB):
         distances = [self.cosine_similarity(query_vector, self.db_vector_list[vector_id]) for vector_id in
                      vectors_ids_in_probes]
         nearest_vectors_index = np.argpartition(distances, -k)[-k:]
-        nearest_vectors_ids_and_distance = [(self.db_external_ids[vectors_ids_in_probes[vector_index]], distances[vector_index]) for
-                                            vector_index in nearest_vectors_index]
+        nearest_vectors_ids_and_distance = [
+            (self.db_external_ids[vectors_ids_in_probes[vector_index]], distances[vector_index]) for
+            vector_index in nearest_vectors_index]
         nearest_vectors_ids_and_distance.sort(key=lambda x: -x[1])
         return nearest_vectors_ids_and_distance
 
