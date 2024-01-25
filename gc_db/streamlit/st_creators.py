@@ -19,7 +19,8 @@ def display_result_gallery(images_list: list[str], similarities: list[float], is
                     st.image(image_path)
                     is_knn = is_bool_list[i]
                     sim_to_disp = str(round(similarities[i], 2))
-                    st.write(f"Similarité: {sim_to_disp} \n **KNN: :{'green' if is_knn else 'red'}[{is_knn}]**")
+                    st.write(
+                        f"Similarité: {sim_to_disp} \n **KNN: :{'green' if is_knn else 'red'}[{is_knn}]**")
 
         except IndexError:
             pass

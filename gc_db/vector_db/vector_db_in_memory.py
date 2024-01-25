@@ -40,6 +40,7 @@ class VectorDB_IM(VectorDB):
             (self.db_external_ids[vectors_ids_in_probes[vector_index]], distances[vector_index]) for
             vector_index in nearest_vectors_index]
         nearest_vectors_ids_and_distance.sort(key=lambda x: -x[1])
+        print(nearest_vectors_ids_and_distance)
         return nearest_vectors_ids_and_distance
 
     def init_kmeans_index(self, nb_clusters: int = 10):

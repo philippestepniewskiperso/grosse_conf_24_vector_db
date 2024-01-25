@@ -1,4 +1,5 @@
-from datetime import datetime, time
+from datetime import datetime
+import time
 from typing import Any
 from fashion_clip.fashion_clip import FashionCLIP
 import numpy as np

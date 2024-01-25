@@ -42,6 +42,7 @@ with st.sidebar:
         st.number_input("**Nombre de clusters:**", key="n_clusters", value=10, step=1)
         reindex = st.button("Ré-indexer")
         if reindex:
+            VDB_IM.inverted_index = {}
             VDB_IM.init_kmeans_index(nb_clusters=st.session_state["n_clusters"])
             st.write(len(VDB_IM.inverted_index))
 
