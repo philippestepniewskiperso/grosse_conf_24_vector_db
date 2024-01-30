@@ -1,6 +1,8 @@
 import numpy as np
 import streamlit as st
 
+from gc_db.vector_db.vector_db_in_memory import VectorDB_IM
+
 
 def display_result_gallery(images_list: list[str], similarities: list[float], is_bool_list: list[bool],
                            nb_cols: int = 10):
@@ -19,9 +21,12 @@ def display_result_gallery(images_list: list[str], similarities: list[float], is
                     st.image(image_path)
                     is_knn = is_bool_list[i]
                     sim_to_disp = str(round(similarities[i], 2))
-                    st.write(
-                        f"Similarité: {sim_to_disp} \n **KNN: :{'green' if is_knn else 'red'}[{is_knn}]**")
-
+                    if hasattr(VectorDB_IM,"query_with_kmeans"):
+                        st.write(
+                            f"Similarité: {sim_to_disp} \n **KNN: :{'green' if is_knn else 'red'}[{is_knn}]**")
+                    else:
+                        st.write(
+                            f"Similarité: {sim_to_disp}")
         except IndexError:
             pass
         col += 1
