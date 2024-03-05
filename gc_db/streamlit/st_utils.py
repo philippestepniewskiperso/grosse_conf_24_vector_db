@@ -3,6 +3,7 @@ import time
 from typing import Any
 
 import PIL
+from deep_translator import GoogleTranslator
 from fashion_clip.fashion_clip import FashionCLIP
 import numpy as np
 import streamlit as st
@@ -59,3 +60,7 @@ def get_true_nn_for_query(vdb: VectorDB_IM, returned_nn_ids: list[int], embeded_
     is_knn = [check_if_is_ann(nn_id[0], true_nn) for nn_id in returned_nn_ids]
     recall = np.array(is_knn).sum() / k
     return is_knn, recall
+
+
+def translate_query(query: str) -> str:
+    return GoogleTranslator(source='fr', target='en').translate(query)

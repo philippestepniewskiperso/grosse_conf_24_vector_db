@@ -6,7 +6,7 @@ from PIL import Image
 import streamlit as st
 from fashion_clip.fashion_clip import FashionCLIP
 
-from gc_db.streamlit.st_utils import perform_query
+from gc_db.streamlit.st_utils import perform_query, translate_query
 from gc_db.vector_db.vector_db_in_memory import VectorDB_IM
 import logging
 
@@ -53,12 +53,14 @@ with st.sidebar:
                 st.write(len(VDB_IM.inverted_index))
     search = st.button("Rechercher")
 
-
 tab1, tab2 = st.tabs(["Texte", "Image"])
 use_ivf = st.session_state["use_ivf"] if "use_ivf" in st.session_state else False
 with tab1:
     if search:
-        perform_query(VDB_IM, FCLIP, query_text, use_kmeans_query=use_ivf)
+        logger.info(f"Requête {query_text} ")
+        translated_query_text = translate_query(query_text)
+        logger.info(f"Translated {query_text} to {translated_query_text}")
+        perform_query(VDB_IM, FCLIP, translated_query_text, use_kmeans_query=use_ivf)
         st.write(st.session_state["log_dataframe"])
 
 with tab2:
