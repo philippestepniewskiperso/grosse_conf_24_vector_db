@@ -1,26 +1,32 @@
+import logging
 import pickle
-from collections import defaultdict
 import time
 
-import nmslib
+import hnswlib
 import numpy as np
 from fashion_clip.fashion_clip import FashionCLIP
-import logging
-
-from sklearn.cluster import KMeans
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 class VectorDBNMS:
 
     def __init__(self):
-        self.db_vector = nmslib.init(method='hnsw', space='cosinesimil')
+        self.db_vector = hnswlib.Index(space='cosine', dim=512)
+        self.db_vector.init_index(max_elements=105100, ef_construction=200, M=16)
 
-    def insert(self, vector: np.array, vector_id: int):
-        self.db_vector.addDataPoint(vector_id,vector)
-        self.db_vector.createIndex({'post': 2}, print_progress=True)
+    def insert(self, vectors: list[np.array], vector_ids: list[int]):
+        self.db_vector.add_items(vectors, vector_ids)
 
+    def index_db(self):
+        self.db_vector.set_ef(90)
+
+    def query(self, query_vector: np.array, k: int = 20):
+        results = self.db_vector.knn_query(query_vector, k=k)
+        results = list(zip(results[0][0], results[1][0]))
+        results.sort(key=lambda x: -x[1])
+        return results
 
 
 if __name__ == "__main__":
@@ -29,37 +35,21 @@ if __name__ == "__main__":
     VDB_IM = VectorDBNMS()
     if hasattr(VDB_IM, "insert"):
         start = time.time()
-        _ = [VDB_IM.insert(dict_ids_embeddings[id], id) for id in dict_ids_embeddings.keys()]
+        to_insert = list(dict_ids_embeddings.values())
+        to_insert_ids = list(dict_ids_embeddings.keys())
+        VDB_IM.insert(to_insert, to_insert_ids)
         end = time.time()
         lasted = np.round(end - start, 3)
-        logger.info("Loading vector to memory db : " + str(len(VDB_IM.db_vector)))
+        # logger.info("Loading vector to memory db : " + str(len(VDB_IM.db_vector)))
         logger.info("Time elapsed to insert and index:" + str(lasted))
 
     if hasattr(VDB_IM, "query"):
         FCLIP = FashionCLIP('fashion-clip')
         embeded_query = FCLIP.encode_text(["White tee shirt with NASA logo"], 1)[0]
+        logger.info("QUERY SHAPE:" + str(embeded_query.shape))
         start = time.time()
         nn = VDB_IM.query(embeded_query)
         end = time.time()
-        lasted = np.round(end - start, 3)
+        lasted = np.round(end - start, 6)
         logger.info("Time elapsed with exhaustive search:" + str(lasted))
         logger.info("Results : " + str(nn))
-
-    if hasattr(VDB_IM, 'init_kmeans_index'):
-        start = time.time()
-        VDB_IM.init_kmeans_index()
-        end = time.time()
-        lasted = np.round(end - start, 3)
-        # 2 secondes sur le sample
-        # 11 secondes sur le full
-        logger.info("Computed hsnw index in " + str(lasted))
-        logger.info("Codebook :" + str(VDB_IM.codebook)[:200])
-        logger.info("Inverted index:" + str(VDB_IM.inverted_index)[:200])
-        logger.info("Inverted index first cluster length: " + str(len(VDB_IM.inverted_index[0])))
-
-    if hasattr(VDB_IM, 'query_with_kmeans'):
-        start = time.time()
-        nn = VDB_IM.query_with_kmeans(embeded_query)
-        end = time.time()
-        lasted = np.round(end - start, 3)
-        logger.info("Time elapsed with IVF search:" + str(lasted))

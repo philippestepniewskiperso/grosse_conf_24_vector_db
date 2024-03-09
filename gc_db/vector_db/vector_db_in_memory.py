@@ -72,6 +72,7 @@ if __name__ == "__main__":
     if hasattr(VDB_IM, "query"):
         FCLIP = FashionCLIP('fashion-clip')
         embeded_query = FCLIP.encode_text(["White tee shirt with NASA logo"], 1)[0]
+        logger.info("QUERY SHAPE:"+str(embeded_query.shape))
         start = time.time()
         nn = VDB_IM.query(embeded_query)
         end = time.time()
