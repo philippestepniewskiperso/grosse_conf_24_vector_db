@@ -1,5 +1,5 @@
-import numpy as np
 import streamlit as st
+from PIL import Image
 
 from gc_db.vector_db.vector_db_in_memory import VectorDB_IM
 
@@ -21,7 +21,7 @@ def display_result_gallery(images_list: list[str], similarities: list[float], is
                     st.image(image_path)
                     is_knn = is_bool_list[i]
                     sim_to_disp = str(round(similarities[i], 2))
-                    if hasattr(VectorDB_IM,"query_with_kmeans"):
+                    if hasattr(VectorDB_IM, "query_with_kmeans"):
                         st.write(
                             f"Similarité: {sim_to_disp} \n **KNN: :{'green' if is_knn else 'red'}[{is_knn}]**")
                     else:
@@ -38,3 +38,14 @@ def prepare_grid(cols, rows):
         with st.container():
             grid[i] = st.columns(rows, gap="large")
     return grid
+
+
+def image_as_query(uploaded_file):
+    image = Image.open(uploaded_file)
+    col1, col2 = st.columns(2)
+    with col1:
+        st.image(image, width=200)
+    cloth = st.session_state["SEG"].extract_mask_from_image(image)
+    with col2:
+        st.image(cloth, width=200)
+    return cloth
