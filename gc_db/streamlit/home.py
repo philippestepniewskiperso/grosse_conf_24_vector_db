@@ -13,9 +13,10 @@ logger = logging.getLogger(__name__)
 
 if "--hnsw" in sys.argv:
     hsnw = True
+    st.session_state["hnsw"] = hsnw
 else:
     hsnw = False
-
+    st.session_state["hnsw"] = hsnw
 
 st.session_state["k"] = 20
 
