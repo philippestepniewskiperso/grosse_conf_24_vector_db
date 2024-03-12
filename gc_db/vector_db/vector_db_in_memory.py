@@ -1,12 +1,12 @@
+import logging
 import pickle
-from collections import defaultdict
 import time
 
 import numpy as np
 from fashion_clip.fashion_clip import FashionCLIP
-import logging
-
 from sklearn.cluster import KMeans
+
+from gc_db.config import DICT_IDS_EMBEDDINGS_FULL_PATH
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -63,7 +63,7 @@ class VectorDB_IM():
 
 if __name__ == "__main__":
     logger.info("Starting Main")
-    dict_ids_embeddings = pickle.load(open("../../data/dict_ids_embeddings_full.pickle", "rb"))
+    dict_ids_embeddings = pickle.load(open(DICT_IDS_EMBEDDINGS_FULL_PATH, "rb"))
     VDB_IM = VectorDB_IM()
     if hasattr(VDB_IM, "insert"):
         _ = [VDB_IM.insert(dict_ids_embeddings[id], id) for id in dict_ids_embeddings.keys()]
@@ -72,7 +72,7 @@ if __name__ == "__main__":
     if hasattr(VDB_IM, "query"):
         FCLIP = FashionCLIP('fashion-clip')
         embeded_query = FCLIP.encode_text(["White tee shirt with NASA logo"], 1)[0]
-        logger.info("QUERY SHAPE:"+str(embeded_query.shape))
+        logger.info("QUERY SHAPE:" + str(embeded_query.shape))
         start = time.time()
         nn = VDB_IM.query(embeded_query)
         end = time.time()
