@@ -6,6 +6,8 @@ import hnswlib
 import numpy as np
 from fashion_clip.fashion_clip import FashionCLIP
 
+from gc_db.config import DICT_IDS_EMBEDDINGS_FULL_PATH
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -31,7 +33,7 @@ class VectorDBNMS:
 
 if __name__ == "__main__":
     logger.info("Starting Main")
-    dict_ids_embeddings = pickle.load(open("../../data/dict_ids_embeddings_full.pickle", "rb"))
+    dict_ids_embeddings = pickle.load(open(DICT_IDS_EMBEDDINGS_FULL_PATH, "rb"))
     VDB_IM = VectorDBNMS()
     if hasattr(VDB_IM, "insert"):
         start = time.time()

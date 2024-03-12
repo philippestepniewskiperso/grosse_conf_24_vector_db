@@ -3,6 +3,7 @@ import sys
 
 import streamlit as st
 
+from gc_db.config import GC_LOGO_PATH
 from gc_db.streamlit.init_db_st import init_streamlit
 from gc_db.streamlit.st_creators import image_as_query
 from gc_db.streamlit.st_utils import perform_query, translate_query
@@ -25,7 +26,7 @@ VDB_IM, FCLIP, SEG = init_streamlit(hsnw)
 st.set_page_config(layout="wide")
 st.title("MOTEUR DE RECHERCHE MULTI-MODAL")
 with st.sidebar:
-    st.image("./data/assets/gc_logo.webp", width=300)
+    st.image(GC_LOGO_PATH, width=300)
     query_text = st.text_input(label="**Votre requête:**")
     if hasattr(VDB_IM, 'query_with_kmeans'):
         st.checkbox("**Utiliser l'index inversé**", key="use_ivf")

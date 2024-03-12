@@ -1,6 +1,8 @@
 import pickle
 from fashion_clip.fashion_clip import FashionCLIP
 import numpy as np
+
+from gc_db.config import DICT_IDS_EMBEDDINGS_PATH, IMAGES_PATH
 from gc_db.utils.flex_logging import stream_handler
 import os
 import logging
@@ -52,6 +54,6 @@ class Embedder:
 if __name__ == "__main__":
     logger.info("Starting embedding extraction")
     emb = Embedder()
-    dict_ids_embeddings = emb.create_product_id_embedding_dict("images/")
+    dict_ids_embeddings = emb.create_product_id_embedding_dict(IMAGES_PATH)
     logger.info(dict_ids_embeddings)
-    emb.serialize_embeddings(dict_ids_embeddings, "data/dict_ids_embeddings.pickle")
+    emb.serialize_embeddings(dict_ids_embeddings, DICT_IDS_EMBEDDINGS_PATH)
