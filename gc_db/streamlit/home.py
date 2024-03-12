@@ -39,12 +39,11 @@ with st.sidebar:
                 VDB_IM.inverted_index = {}
                 VDB_IM.init_kmeans_index(nb_clusters=st.session_state["n_clusters"])
                 st.write(len(VDB_IM.inverted_index))
-    search = st.button("Rechercher")
 
 tab1, tab2 = st.tabs(["Texte", "Image"])
 use_ivf = st.session_state["use_ivf"] if "use_ivf" in st.session_state else False
 with tab1:
-    if search:
+    if query_text != "":
         logger.info(f"Requête {query_text} ")
         translated_query_text = translate_query(query_text)
         logger.info(f"Translated {query_text} to {translated_query_text}")
