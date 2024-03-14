@@ -5,6 +5,7 @@ import time
 from fashion_clip.fashion_clip import FashionCLIP
 
 from gc_db.config import DICT_IDS_EMBEDDINGS_PATH
+from gc_db.streamlit.st_utils import load_logs_of_the_day_if_exists
 from gc_db.utils.image_segmentation import ClothSegmenter
 from gc_db.vector_db.vector_db_nmslib import VectorDBNMS
 from gc_db.vector_db.vector_db_in_memory import VectorDB_IM
@@ -16,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 def init_streamlit(hsnw: bool):
+    load_logs_of_the_day_if_exists()
     if "is_initiated" not in st.session_state:
         logger.info("INITIATING")
         dict_ids_embeddings = pickle.load(open(DICT_IDS_EMBEDDINGS_PATH, "rb"))

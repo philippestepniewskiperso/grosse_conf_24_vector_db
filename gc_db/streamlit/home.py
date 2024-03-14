@@ -7,10 +7,10 @@ from gc_db.config import GC_LOGO_PATH
 from gc_db.streamlit.init_db_st import init_streamlit
 from gc_db.streamlit.st_creators import image_as_query
 from gc_db.streamlit.st_utils import perform_query, translate_query
+from gc_db.utils.utils import style_df
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
 
 if "--hnsw" in sys.argv:
     hsnw = True
@@ -49,7 +49,7 @@ with tab1:
         translated_query_text = translate_query(query_text)
         logger.info(f"Translated {query_text} to {translated_query_text}")
         perform_query(VDB_IM, FCLIP, translated_query_text, use_kmeans_query=use_ivf)
-        st.write(st.session_state["log_dataframe"])
+        st.table(style_df(st.session_state["log_dataframe"], 20))
 
 with tab2:
     uploaded_file = st.file_uploader("Choose an image to upload", accept_multiple_files=False, )

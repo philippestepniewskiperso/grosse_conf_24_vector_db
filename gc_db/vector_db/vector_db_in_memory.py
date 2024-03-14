@@ -12,51 +12,68 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class VectorDB_IM():
+class VectorDB_IM:
 
+    # initialisation de la base de données
     def __init__(self):
         self.inverted_index: dict[int, list[np.array]] = {}
         self.codebook: list[np.array] = []
         self.db_vector: dict[int, np.array] = {}
 
     def insert(self, vector: np.array, vector_id: int):
+        # on insert le vecteur d'embedding avec son id en clé
         self.db_vector[vector_id] = vector
 
-    def query(self, query_vector: np.array, k: int = 20):
-        distances_and_ids: list[tuple[int, float]] = [(vector_id, self.cosine_similarity(query_vector, vector)) for
-                                                      vector_id, vector in self.db_vector.items()]
+    def query(self, query_vector: np.array, k: int = 20) -> list[tuple[int, float]]:
+        # on veut retourner une liste au format [(vector_id,similarité),()..] = [(1432,0.4),(12,0.39)]
+        distances_and_ids: list[tuple[int, float]] = [
+            (vector_id, self.cosine_similarity(query_vector, self.db_vector[vector_id])) for vector_id in
+            self.db_vector.keys()]
+        # on trie la liste par similarité décroissante
         distances_and_ids.sort(key=lambda x: -x[1])
-        return distances_and_ids[0:k]
+        return distances_and_ids[:k]
 
-    def init_kmeans_index(self, nb_clusters: int):
-        kmeans = KMeans(n_clusters=nb_clusters)
+    def init_kmeans_index(self, nb_clusters: int = 10):
+        # initialisons un modèle kmeans de nb_clusters
+        kmeans = KMeans(n_clusters=nb_clusters, random_state=42)
+        # on le fit sur tous les vecteurs de la base
         kmeans.fit(list(self.db_vector.values()))
-        self.codebook = kmeans.cluster_centers_
-        for vector_id, vector in self.db_vector.items():
-            predicted_cluster_id: int = kmeans.predict([vector])[0]
-            if predicted_cluster_id in self.inverted_index:
-                self.inverted_index[predicted_cluster_id].append(vector_id)
+        # on stocke les centroides dans le codebook
+        self.codebook: list[np.array] = kmeans.cluster_centers_
+        # maintenant stockons chaque cluster_id avec la liste de ses vecteurs {4:[423,3432],2:[343,1]...
+        self.inverted_index: dict[int, list[np.array]] = {}
+        for vector_id in self.db_vector.keys():
+            cluster_id = kmeans.predict([self.db_vector[vector_id]])[0]
+            if cluster_id not in self.inverted_index:
+                self.inverted_index[cluster_id] = [vector_id]
             else:
-                self.inverted_index[predicted_cluster_id] = [vector_id]
+                self.inverted_index[cluster_id].append(vector_id)
 
-    def query_with_kmeans(self, query_vector: np.array, k: int = 20, n_probes: int = 1) -> list[
-        tuple[int, float]]:
-        # trouver le centroide le plus proche du vecteur requête
-        centroides_distances = [(centroide_id, self.cosine_similarity(query_vector, centroide)) for
-                                centroide_id, centroide in enumerate(self.codebook)]
-        centroides_distances.sort(key=lambda x: -x[1])
-        np_centroide = centroides_distances[0]
-        ##On récupère la liste des vecteurs dans ce centroide
-        np_centroide_vectors = self.inverted_index[np_centroide[0]]
-        ## On calcule les distances entre cette liste et le vecteur requête
-        distances_and_ids = [(vector_id, self.cosine_similarity(self.db_vector[vector_id], query_vector)) for vector_id
-                             in np_centroide_vectors]
-        ## on trie et on retourne les k plus proches vecteurs
+    def query_with_kmeans(self, query_vector: np.array, n_probes: int = 1, k: int = 20) -> list[tuple[int, float]]:
+        # récupérer le centroide_id le plus proche du vecteur requête
+        # centroids = [[],[],[]] sans clé, l'index est l'id
+        distance_query_centroids: list[tuple[int, float]] = [
+            (cluster_id, self.cosine_similarity(query_vector, centroid)) for cluster_id, centroid in
+            enumerate(self.codebook)]
+        distance_query_centroids.sort(key=lambda x: -x[1])
+        nearest_cluster_ids = distance_query_centroids[:n_probes]
+        print("NB CLUSTERS SELECTED =", len(nearest_cluster_ids))
+        # on récupère la liste des vecteurs des n_probes plus proches clusters
+        n_probes_vector_ids: list[int] = []
+        for cluster_id, _ in nearest_cluster_ids:
+            n_probes_vector_ids = n_probes_vector_ids + self.inverted_index[cluster_id]
+        # on calcul la similarité avec tous ces vecteurs  et la requête
+        distances_and_ids: list[tuple[int, float]] = [
+            (vector_id, self.cosine_similarity(query_vector, self.db_vector[vector_id])) for vector_id in
+            n_probes_vector_ids]
+        # on trie
         distances_and_ids.sort(key=lambda x: -x[1])
-        return distances_and_ids[0:k]
+        return distances_and_ids[:k]
 
-    def cosine_similarity(self, vector_a: np.array, vector_b: np.array) -> float:
+    def cosine_similarity(self, vector_a: np.array, vector_b: np.array):
+        # produit scalair de a et b
         num = np.dot(vector_a, vector_b)
+        # produit scalaire des normes de a et b
         denom = np.dot(np.linalg.norm(vector_a), np.linalg.norm(vector_b))
         return num / denom
 

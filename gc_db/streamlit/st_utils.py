@@ -1,3 +1,4 @@
+import os.path
 from datetime import datetime
 import time
 from typing import Any
@@ -9,10 +10,27 @@ import numpy as np
 import streamlit as st
 import gc_db.streamlit.st_creators as stc
 from gc_db.utils.utils import get_path_from_image_id, check_if_is_ann
-
+from gc_db.config import ROOT_DIR
 import pandas as pd
 
 from gc_db.vector_db.vector_db_in_memory import VectorDB_IM
+
+
+def load_logs_of_the_day_if_exists():
+    current_date = get_slugified_current_date()
+    log_file = os.path.join(ROOT_DIR, "logs", current_date)
+    if os.path.isfile(log_file):
+        st.session_state["log_dataframe"] = pd.read_parquet(log_file)
+
+
+def get_slugified_current_date():
+    aujourdhui = datetime.now()
+    return aujourdhui.strftime("%Y-%m-%d")
+
+
+def dump_logs_to_file(log_df: pd.DataFrame):
+    file_name = get_slugified_current_date()
+    log_df.to_parquet(os.path.join(ROOT_DIR, "logs", file_name))
 
 
 def log_query(query: str, query_time: float, recall: float):
@@ -25,11 +43,13 @@ def log_query(query: str, query_time: float, recall: float):
                "nombre de sondes": [n_probes], "n_clusters": [n_clusters],
                "temps de requête": [query_time], "rappel": [recall]}
     if "log_dataframe" in st.session_state:
-        old_df = st.session_state["log_dataframe"].copy()
-        old_df = pd.concat([old_df, pd.DataFrame(log_row, index=[dt_index])])
-        st.session_state["log_dataframe"] = old_df
+        log_df = st.session_state["log_dataframe"].copy()
+        log_df = pd.concat([log_df, pd.DataFrame(log_row, index=[dt_index])])
+        st.session_state["log_dataframe"] = log_df
     else:
-        st.session_state["log_dataframe"] = pd.DataFrame(log_row, index=[dt_index])
+        log_df = pd.DataFrame(log_row, index=[dt_index])
+        st.session_state["log_dataframe"] = log_df
+    dump_logs_to_file(log_df)
 
 
 def perform_query(vdb: VectorDB_IM, fclip: FashionCLIP, query: str | PIL.Image.Image, use_kmeans_query: bool):
@@ -40,7 +60,10 @@ def perform_query(vdb: VectorDB_IM, fclip: FashionCLIP, query: str | PIL.Image.I
         embeded_query = fclip.encode_text([query], 1)[0]
     start = time.time()
     if use_kmeans_query:
-        nn = vdb.query_with_kmeans(embeded_query, n_probes=st.session_state["n_probes"], k=k)
+        try:
+            nn = vdb.query_with_kmeans(embeded_query, n_probes=st.session_state["n_probes"], k=k)
+        except TypeError:
+            nn = vdb.query_with_kmeans(embeded_query, k=k)
     else:
         nn = vdb.query(embeded_query, k=k)
     end = time.time()
