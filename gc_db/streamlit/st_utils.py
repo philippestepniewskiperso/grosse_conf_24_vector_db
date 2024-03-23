@@ -71,7 +71,7 @@ def perform_query(vdb: VectorDB_IM, fclip: FashionCLIP, query: str | PIL.Image.I
     lasted = np.round(end - start, 5)
     ids, similarities = zip(*nn)
     image_pathes = [get_path_from_image_id(dist_id) for dist_id in ids]
-    is_knn, recall = get_true_nn_for_query(vdb, nn, embeded_query, k=k)
+    is_knn, recall = get_true_nn_for_query(st.session_state["VDB_IM"], nn, embeded_query, k=k)
     st.info(f"Temps d'éxecution de la requête : **{lasted} seconds**")
     stc.display_result_gallery(image_pathes, similarities, is_knn, nb_cols=5)
     log_query(query, lasted, recall)
