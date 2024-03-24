@@ -6,7 +6,7 @@ import numpy as np
 from fashion_clip.fashion_clip import FashionCLIP
 from sklearn.cluster import KMeans
 
-from gc_db.config import DICT_IDS_EMBEDDINGS_FULL_PATH
+from gc_db.config import DICT_IDS_EMBEDDINGS_PATH
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -80,7 +80,7 @@ class VectorDB_IM:
 
 if __name__ == "__main__":
     logger.info("Starting Main")
-    dict_ids_embeddings = pickle.load(open(DICT_IDS_EMBEDDINGS_FULL_PATH, "rb"))
+    dict_ids_embeddings = pickle.load(open(DICT_IDS_EMBEDDINGS_PATH, "rb"))
     VDB_IM = VectorDB_IM()
     if hasattr(VDB_IM, "insert"):
         _ = [VDB_IM.insert(dict_ids_embeddings[id], id) for id in dict_ids_embeddings.keys()]
