@@ -49,3 +49,54 @@ def image_as_query(uploaded_file):
     with col2:
         st.image(cloth, width=200)
     return cloth
+
+
+def set_style_css(major_font_size_px: int = 30, minor_font_size_px: int = 25):
+    tabs_font_css = """
+    <style>
+    div[class*="stTextArea"] label p{
+      font-size: {major_font_size_px}px;
+    }
+
+    div[class*="stTextInput"] label p{
+      font-size: {major_font_size_px}px;
+    }
+
+    div[class*="stNumberInput"] label p{
+      font-size: {major_font_size_px}px;
+    }
+
+    div[class*="stButton"] label p{
+      font-size: {major_font_size_px}px;
+    }
+
+    div[class*=".st-emotion-cache-16idsys"] label p{
+      font-size: {major_font_size_px}px;
+    }
+
+    div[class*=".st-emotion-cache-1vbkxwb"] label p{
+      font-size: {major_font_size_px}px;
+    }
+
+    .st-emotion-cache-1vbkxwb strong {
+        font-size: {major_font_size_px}px; /* Remplacez la taille par celle que vous désirez */
+    }
+
+    .st-ag input {
+        font-size: {major_font_size_px}px; /* Remplacez la taille par celle que vous désirez */
+    }
+
+    .st-emotion-cache-5rimss p,
+    .st-emotion-cache-5rimss strong {
+        font-size: {minor_font_size_px}px; /* Remplacez la taille par celle que vous désirez */
+    }
+
+    .st-emotion-cache-16idsys p {
+        font-size: {minor_font_size_px}px; /* Remplacez la taille par celle que vous désirez */
+    }
+    </style>
+    """
+    tabs_font_css = tabs_font_css.replace("{major_font_size_px}", str(major_font_size_px))
+    tabs_font_css = tabs_font_css.replace("{minor_font_size_px}", str(minor_font_size_px))
+
+    st.write(tabs_font_css, unsafe_allow_html=True)

@@ -5,7 +5,7 @@ import streamlit as st
 
 from gc_db.config import GC_LOGO_PATH
 from gc_db.streamlit.init_db_st import init_streamlit
-from gc_db.streamlit.st_creators import image_as_query
+from gc_db.streamlit.st_creators import image_as_query, set_style_css
 from gc_db.streamlit.st_utils import perform_query, translate_query
 from gc_db.utils.utils import style_df
 
@@ -25,6 +25,9 @@ VDB_IM, FCLIP, SEG = init_streamlit(hnsw)
 
 st.set_page_config(layout="wide")
 st.title("MOTEUR DE RECHERCHE MULTI-MODAL")
+
+set_style_css(30, 25)
+
 with st.sidebar:
     st.image(GC_LOGO_PATH, width=300)
     query_text = st.text_input(label="**Votre requête:**")
@@ -55,7 +58,7 @@ with tab1:
             perform_query(st.session_state["VDB_NMS"], FCLIP, translated_query_text, use_kmeans_query=use_ivf)
         else:
             perform_query(VDB_IM, FCLIP, translated_query_text, use_kmeans_query=use_ivf)
-        st.table(style_df(st.session_state["log_dataframe"], 20))
+        st.table(style_df(st.session_state["log_dataframe"], 30))
 
 with tab2:
     uploaded_file = st.file_uploader("Choose an image to upload", accept_multiple_files=False, )

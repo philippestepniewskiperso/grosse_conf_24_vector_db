@@ -4,6 +4,7 @@ import time
 from typing import Any
 
 import PIL
+from PIL.Image import Image
 from deep_translator import GoogleTranslator
 from fashion_clip.fashion_clip import FashionCLIP
 import numpy as np
@@ -34,6 +35,8 @@ def dump_logs_to_file(log_df: pd.DataFrame):
 
 
 def log_query(query: str, query_time: float, recall: float):
+    if isinstance(query, Image):
+        query = "image_query"
     now = datetime.now()
     dt_index = pd.to_datetime(now)
     use_ivf = st.session_state["use_ivf"] if "use_ivf" in st.session_state else False
