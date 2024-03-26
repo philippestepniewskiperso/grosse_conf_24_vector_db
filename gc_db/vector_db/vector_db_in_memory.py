@@ -1,16 +1,5 @@
-import logging
-import pickle
-import time
-
 import numpy as np
-from fashion_clip.fashion_clip import FashionCLIP
 from sklearn.cluster import KMeans
-
-from gc_db.config import DICT_IDS_EMBEDDINGS_PATH
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 
 class VectorDB_IM:
 
@@ -79,6 +68,13 @@ class VectorDB_IM:
 
 
 if __name__ == "__main__":
+    import logging
+    import pickle
+    import time
+    from gc_db.config import DICT_IDS_EMBEDDINGS_PATH
+    from fashion_clip.fashion_clip import FashionCLIP
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
     logger.info("Starting Main")
     dict_ids_embeddings = pickle.load(open(DICT_IDS_EMBEDDINGS_PATH, "rb"))
     VDB_IM = VectorDB_IM()
