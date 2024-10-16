@@ -3,3 +3,6 @@ run:
 
 run-hnsw:
 	streamlit run gc_db/streamlit/home.py -- --hnsw
+
+
+#bla
